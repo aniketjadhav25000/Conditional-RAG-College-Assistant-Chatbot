@@ -54,15 +54,8 @@ It uses LangGraph to classify questions and route them to the appropriate workfl
 
 ## Project Structure
 
-Conditional-RAG-College-Assistant-Chatbot/
-│
-├── app.py
-├── conditional_RAG.py
-├── academics_handbook.pdf
-├── fee_structure.pdf
-├── requirements.txt
-├── .gitignore
-└── README.md
+<img width="497" height="292" alt="image" src="https://github.com/user-attachments/assets/d49d4296-175a-430b-b9fe-6d04e8fca28f" />
+
 
 ## Knowledge Sources
 
@@ -72,33 +65,31 @@ Conditional-RAG-College-Assistant-Chatbot/
 ## Installation and Setup
 
 ### 1. Clone the Repository
-
+``` bash
 git clone https://github.com/aniketjadhav25000/Conditional-RAG-College-Assistant-Chatbot.git
 
 cd Conditional-RAG-College-Assistant-Chatbot
-
+```
 ### 2. Create a Virtual Environment (Recommended)
-
+```bash
 python -m venv venv
+```
 
 Activate on Windows:
-
+``` bash
 venv\Scripts\activate
-
-Activate on macOS or Linux:
-
-source venv/bin/activate
+```
 
 ### 3. Install Dependencies
-
+```bash
 pip install -r requirements.txt
-
+```
 ### 4. Configure Environment Variables
 
 Create a .env file in the project directory and add your Groq API key:
-
+```bash 
 GROQ_API_KEY=your_groq_api_key
-
+```
 Replace your_groq_api_key with your actual API key.
 
 Keep your API key private. Never upload your .env file or expose your API key in a public repository.
@@ -106,9 +97,9 @@ Keep your API key private. Never upload your .env file or expose your API key in
 ### 5. Run the Application
 
 Launch the Streamlit interface:
-
+```bash
 streamlit run app.py
-
+```
 If your Streamlit entry point uses a different filename, replace app.py with the correct filename.
 
 ## Example Questions
