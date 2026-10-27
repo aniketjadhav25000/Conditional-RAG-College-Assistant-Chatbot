@@ -1,19 +1,23 @@
-```bash
 # Conditional RAG College Assistant Chatbot
 
-An AI-powered college chatbot built using LangGraph and Conditional RAG to answer academic, fee-related, and general questions.
+A LangGraph-based AI assistant that uses conditional workflows to route queries and RAG to retrieve relevant information from documents and generate useful answers.
 
 ## Overview
 
-The chatbot classifies student queries and routes them to the appropriate processing path. It retrieves relevant information from college PDF documents when needed and generates answers based on the student's selected programme.
+The Conditional RAG College Assistant Chatbot helps students get answers to academic, fee-related, and general questions.
+
+It uses LangGraph to classify questions and route them to the appropriate workflow. For academic and fee-related questions, it retrieves relevant information from college PDF documents. For general questions, it generates responses without document retrieval.
 
 ## Features
 
-- LLM-based query classification
-- Conditional routing using LangGraph
-- Document retrieval using FAISS
+- Query classification using an LLM
+- Conditional workflow routing using LangGraph
+- Retrieval-Augmented Generation (RAG)
+- PDF document loading and text splitting
+- Semantic search using FAISS
+- Hugging Face sentence embeddings
 - Programme-specific responses
-- General question support without document retrieval
+- Support for academic, fee-related, and general questions
 - Interactive Streamlit interface
 
 ## Technologies Used
@@ -26,70 +30,123 @@ The chatbot classifies student queries and routes them to the appropriate proces
 - FAISS
 - PyPDFLoader
 - RecursiveCharacterTextSplitter
-- python-dotenv
 - Streamlit
+- python-dotenv
 
 ## Project Workflow
 
 1. The student selects a programme and enters a question.
-2. The LLM classifies the query as academic, fee-related, or general.
-3. LangGraph routes the query to the appropriate branch.
-4. Relevant information is retrieved from the corresponding PDF when required.
-5. The LLM generates the final response.
+2. The LLM classifies the question as academic, fee-related, or general.
+3. LangGraph uses conditional routing to select the appropriate workflow.
+4. For academic questions, the system retrieves relevant information from the academic handbook.
+5. For fee-related questions, the system retrieves relevant information from the fee structure document.
+6. For general questions, the system responds without retrieving documents.
+7. The LLM generates the final answer using the retrieved context or general knowledge.
+
+## RAG Pipeline
+
+1. Load college PDF documents using PyPDFLoader.
+2. Split documents into smaller text chunks using RecursiveCharacterTextSplitter.
+3. Convert the text chunks into vector embeddings using Hugging Face Embeddings.
+4. Store the embeddings in a FAISS vector database.
+5. Retrieve relevant document chunks based on the student's question.
+6. Generate a response using the retrieved information and the LLM.
+
+## Project Structure
+
+Conditional-RAG-College-Assistant-Chatbot/
+│
+├── app.py
+├── conditional_RAG.py
+├── academics_handbook.pdf
+├── fee_structure.pdf
+├── requirements.txt
+├── .gitignore
+└── README.md
 
 ## Knowledge Sources
 
-- `academics_handbook.pdf` — Academic rules and course information.
-- `fee_structure.pdf` — Fee details and payment rules.
+- academics_handbook.pdf — Contains academic rules and course information.
+- fee_structure.pdf — Contains fee details and payment information.
 
-## Installation
+## Installation and Setup
 
 ### 1. Clone the Repository
 
-git clone YOUR_GITHUB_REPOSITORY_URL
-cd conditional-rag-college-assistant
+git clone https://github.com/aniketjadhav25000/Conditional-RAG-College-Assistant-Chatbot.git
 
-### 2. Install Dependencies
+cd Conditional-RAG-College-Assistant-Chatbot
+
+### 2. Create a Virtual Environment (Recommended)
+
+python -m venv venv
+
+Activate on Windows:
+
+venv\Scripts\activate
+
+Activate on macOS or Linux:
+
+source venv/bin/activate
+
+### 3. Install Dependencies
 
 pip install -r requirements.txt
 
-### 3. Configure Environment Variables
+### 4. Configure Environment Variables
 
-Create a `.env` file and add your Groq API key:
+Create a .env file in the project directory and add your Groq API key:
 
 GROQ_API_KEY=your_groq_api_key
 
-Keep your API key private and never commit your `.env` file.
+Replace your_groq_api_key with your actual API key.
 
-### 4. Run the Application
+Keep your API key private. Never upload your .env file or expose your API key in a public repository.
 
-For the command-line application:
+### 5. Run the Application
 
-python app.py
+Launch the Streamlit interface:
 
-For the Streamlit interface:
+streamlit run app.py
 
-streamlit run streamlit_app.py
-
-Replace the filenames with your actual filenames if they differ.
+If your Streamlit entry point uses a different filename, replace app.py with the correct filename.
 
 ## Example Questions
 
 - What are the attendance requirements?
-- What is the fee structure for BCA?
 - What are the examination rules?
-- What is artificial intelligence?
+- What is the fee structure for BCA?
+- What academic rules should students follow?
+- What courses are available for my programme?
+- What is Artificial Intelligence?
+
+## Key Concepts Demonstrated
+
+- LangGraph: Builds and manages the application workflow.
+- Conditional Workflow: Routes questions to different processing paths based on their classification.
+- RAG: Retrieves relevant document information before generating an answer.
+- Embeddings: Convert text into numerical representations for semantic search.
+- FAISS: Stores and searches document vectors efficiently.
+- LLM: Classifies questions and generates responses.
 
 ## Future Improvements
 
 - Add conversation memory.
-- Improve document retrieval and answer accuracy.
-- Include source citations in responses.
+- Include document source citations in responses.
+- Improve document retrieval accuracy.
+- Add support for more college documents.
 - Deploy the application online.
 
 ## Author
 
 Aniket Jadhav
 
-GitHub: YOUR_GITHUB_PROFILE_URL
-```
+GitHub: https://github.com/aniketjadhav25000
+
+## Repository
+
+https://github.com/aniketjadhav25000/Conditional-RAG-College-Assistant-Chatbot
+
+## License
+
+This project is intended for educational and learning purposes.
