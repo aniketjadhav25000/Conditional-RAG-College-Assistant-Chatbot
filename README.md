@@ -1,4 +1,3 @@
-cat > README.md <<'EOF'
 # Conditional RAG College Assistant Chatbot
 
 A college assistant chatbot built using **LangGraph, LangChain, and Retrieval-Augmented Generation (RAG)**. It uses a conditional workflow to route student queries into academic, fee-related, or general categories and retrieves relevant information from college documents when required.
@@ -44,6 +43,7 @@ The chatbot uses LangGraph conditional edges to classify student queries and rou
 
 
 **RAG Process:**
+<img width="1694" height="527" alt="image" src="https://github.com/user-attachments/assets/becb3a3e-c1dc-481a-b66d-2604195517e0" />
 
 1. **Document Loading:** Loads the academic handbook and fee structure PDFs.
 2. **Text Splitting:** Divides documents into smaller chunks.
@@ -79,7 +79,7 @@ The chatbot uses LangGraph conditional edges to classify student queries and rou
     |-- README.md
     |-- .env.example
     |-- .gitignore
-    |-- .dockerignore
+
 
 Note: Create your local `.env` file for API credentials. Do not commit it to GitHub.
 
