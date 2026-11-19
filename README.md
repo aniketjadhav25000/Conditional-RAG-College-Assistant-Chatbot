@@ -1,143 +1,164 @@
 # Conditional RAG College Assistant Chatbot
 
-A LangGraph-based AI assistant that uses conditional workflows to route queries and RAG to retrieve relevant information from documents and generate useful answers.
+A college assistant chatbot built using **LangGraph, LangChain, and Retrieval-Augmented Generation (RAG)**. It uses a conditional workflow to route student queries into academic, fee-related, or general categories and retrieves relevant information from college documents when required.
 
 ## Overview
 
-The Conditional RAG College Assistant Chatbot helps students get answers to academic, fee-related, and general questions.
+The chatbot provides programme-specific answers by understanding the user's query and selecting the appropriate processing path.
 
-It uses LangGraph to classify questions and route them to the appropriate workflow. For academic and fee-related questions, it retrieves relevant information from college PDF documents. For general questions, it generates responses without document retrieval.
+It supports three programmes:
+- BCA
+- BBA
+- B.Com (H)
 
-## Features
+## Key Features
 
-- Query classification using an LLM
-- Conditional workflow routing using LangGraph
-- Retrieval-Augmented Generation (RAG)
-- PDF document loading and text splitting
-- Semantic search using FAISS
-- Hugging Face sentence embeddings
-- Programme-specific responses
-- Support for academic, fee-related, and general questions
-- Interactive Streamlit interface
+- Conditional query routing using LangGraph.
+- Academic and fee-related document retrieval.
+- RAG-based responses using FAISS vector search.
+- LLM-powered responses using Groq.
+- Programme-specific query handling.
+- Streamlit-based user interface.
 
-## Technologies Used
+## How It Works
 
-- Python
-- LangGraph
-- LangChain
-- ChatGroq
-- Hugging Face Embeddings
-- FAISS
-- PyPDFLoader
-- RecursiveCharacterTextSplitter
-- Streamlit
-- python-dotenv
+| Query Category | Processing Method | Knowledge Source |
+|---|---|---|
+| Academic | RAG | Academics Handbook |
+| Fee-related | RAG | Fee Structure |
+| General | Direct LLM Response | General Knowledge |
 
-## Project Workflow
+## Conditional Workflow
+<img width="1774" height="478" alt="Student Chatbot System Architecture" src="https://github.com/user-attachments/assets/e3532a9c-332f-42b0-a8e1-c95c986dd105" />
 
-1. The student selects a programme and enters a question.
-2. The LLM classifies the question as academic, fee-related, or general.
-3. LangGraph uses conditional routing to select the appropriate workflow.
-4. For academic questions, the system retrieves relevant information from the academic handbook.
-5. For fee-related questions, the system retrieves relevant information from the fee structure document.
-6. For general questions, the system responds without retrieving documents.
-7. The LLM generates the final answer using the retrieved context or general knowledge.
 
-## RAG Pipeline
+The chatbot uses LangGraph conditional edges to classify student queries and route them to the appropriate processing path.
 
-1. Load college PDF documents using PyPDFLoader.
-2. Split documents into smaller text chunks using RecursiveCharacterTextSplitter.
-3. Convert the text chunks into vector embeddings using Hugging Face Embeddings.
-4. Store the embeddings in a FAISS vector database.
-5. Retrieve relevant document chunks based on the student's question.
-6. Generate a response using the retrieved information and the LLM.
+
+- **Query Router:** Identifies the category of the user's query.
+- **Conditional Edges:** Direct the workflow to the selected node.
+- **RAG Nodes:** Retrieve relevant information from the corresponding PDF.
+- **General Node:** Handles queries that do not require document retrieval.
+- **Final Answer:** Returns the generated response to the user.
+
+
+**RAG Process:**
+<img width="1694" height="527" alt="image" src="https://github.com/user-attachments/assets/becb3a3e-c1dc-481a-b66d-2604195517e0" />
+
+1. **Document Loading:** Loads the academic handbook and fee structure PDFs.
+2. **Text Splitting:** Divides documents into smaller chunks.
+3. **Embeddings:** Converts text chunks into numerical vectors using Hugging Face.
+4. **Vector Storage:** Stores the embeddings in a FAISS vector database.
+5. **Retrieval:** Finds the most relevant chunks based on the user's query.
+6. **Response Generation:** Uses the retrieved context to generate an answer through the Groq LLM.
+
+## Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Python | Core programming language |
+| LangGraph | Conditional workflow and routing |
+| LangChain | LLM and RAG integration |
+| Groq | LLM inference |
+| Hugging Face | Text embeddings |
+| FAISS | Vector database |
+| PyPDFLoader | PDF document loading |
+| RecursiveCharacterTextSplitter | Text chunking |
+| Streamlit | User interface |
+| python-dotenv | Environment variable management |
 
 ## Project Structure
 
-<img width="497" height="292" alt="image" src="https://github.com/user-attachments/assets/d49d4296-175a-430b-b9fe-6d04e8fca28f" />
+    Conditional-RAG-College-Assistant-Chatbot/
+    |
+    |-- app.py
+    |-- conditional_RAG.py
+    |-- academics_handbook.pdf
+    |-- fee_structure.pdf
+    |-- requirements.txt
+    |-- README.md
+    |-- .env.example
+    |-- .gitignore
 
+
+Note: Create your local `.env` file for API credentials. Do not commit it to GitHub.
 
 ## Knowledge Sources
 
-- academics_handbook.pdf — Contains academic rules and course information.
-- fee_structure.pdf — Contains fee details and payment information.
+| Document | Description |
+|---|---|
+| academics_handbook.pdf | Academic information and programme details |
+| fee_structure.pdf | Programme-wise fee information |
 
-## Installation and Setup
+## Getting Started
 
 ### 1. Clone the Repository
-``` bash
-git clone https://github.com/aniketjadhav25000/Conditional-RAG-College-Assistant-Chatbot.git
 
-cd Conditional-RAG-College-Assistant-Chatbot
-```
-### 2. Create a Virtual Environment (Recommended)
-```bash
-python -m venv venv
-```
+    git clone https://github.com/aniketjadhav25000/Conditional-RAG-College-Assistant-Chatbot.git
+    cd Conditional-RAG-College-Assistant-Chatbot
 
-Activate on Windows:
-``` bash
-venv\Scripts\activate
-```
+### 2. Create a Virtual Environment
+
+    python -m venv venv
+
+Activate it on Windows:
+
+    venv\Scripts\activate
 
 ### 3. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
+
+    pip install -r requirements.txt
+
 ### 4. Configure Environment Variables
 
-Create a .env file in the project directory and add your Groq API key:
-```bash 
-GROQ_API_KEY=your_groq_api_key
-```
-Replace your_groq_api_key with your actual API key.
+Create a `.env` file in the project root:
 
-Keep your API key private. Never upload your .env file or expose your API key in a public repository.
+    GROQ_API_KEY=your_groq_api_key
+
+Replace `your_groq_api_key` with your actual Groq API key.
 
 ### 5. Run the Application
 
-Launch the Streamlit interface:
-```bash
-streamlit run app.py
-```
-If your Streamlit entry point uses a different filename, replace app.py with the correct filename.
+    streamlit run app.py
 
-## Example Questions
+Open the local URL displayed in your terminal.
 
-- What are the attendance requirements?
-- What are the examination rules?
-- What is the fee structure for BCA?
-- What academic rules should students follow?
-- What courses are available for my programme?
-- What is Artificial Intelligence?
+## Example Queries
 
-## Key Concepts Demonstrated
+- What are the eligibility criteria for BCA?
+- Explain the examination rules.
+- What is the fee structure for BBA?
+- What are the admission requirements for B.Com?
+- Tell me something about the college.
 
-- LangGraph: Builds and manages the application workflow.
-- Conditional Workflow: Routes questions to different processing paths based on their classification.
-- RAG: Retrieves relevant document information before generating an answer.
-- Embeddings: Convert text into numerical representations for semantic search.
-- FAISS: Stores and searches document vectors efficiently.
-- LLM: Classifies questions and generates responses.
+## Concepts Demonstrated
+
+| Concept | Implementation |
+|---|---|
+| Conditional Workflow | LangGraph conditional edges |
+| Query Routing | Category-based query classification |
+| Retrieval-Augmented Generation | Context-based answer generation |
+| Embeddings | Hugging Face sentence embeddings |
+| Vector Search | FAISS similarity search |
+| LLM Integration | Groq API |
 
 ## Future Improvements
 
-- Add conversation memory.
-- Include document source citations in responses.
-- Improve document retrieval accuracy.
-- Add support for more college documents.
+- Add more academic programmes.
+- Support additional document formats.
+- Improve retrieval accuracy.
+- Add conversation history.
 - Deploy the application online.
 
 ## Author
 
-Aniket Jadhav
+**Aniket Jadhav**
 
-GitHub: https://github.com/aniketjadhav25000
-
-## Repository
-
-https://github.com/aniketjadhav25000/Conditional-RAG-College-Assistant-Chatbot
+- GitHub: https://github.com/aniketjadhav25000
+- Portfolio: https://portfolio-ani-react.netlify.app/
+- LinkedIn: https://www.linkedin.com/in/aniket-jadhav-a72466236/
 
 ## License
 
 This project is intended for educational and learning purposes.
+EOF
