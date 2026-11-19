@@ -1,3 +1,4 @@
+cat > README.md <<'EOF'
 # Conditional RAG College Assistant Chatbot
 
 A college assistant chatbot built using **LangGraph, LangChain, and Retrieval-Augmented Generation (RAG)**. It uses a conditional workflow to route student queries into academic, fee-related, or general categories and retrieves relevant information from college documents when required.
@@ -187,3 +188,12 @@ Open the local URL displayed in your terminal.
 ## Author
 
 **Aniket Jadhav**
+
+- GitHub: https://github.com/aniketjadhav25000
+- Portfolio: https://portfolio-ani-react.netlify.app/
+- LinkedIn: https://www.linkedin.com/in/aniket-jadhav-a72466236/
+
+## License
+
+This project is intended for educational and learning purposes.
+EOF
