@@ -31,37 +31,36 @@ It supports three programmes:
 
 ## Conditional Workflow
 
-The chatbot uses LangGraph conditional edges to determine the appropriate route based on the user's query.
+The chatbot uses LangGraph conditional edges to classify student queries and route them to the appropriate processing path.
 
     User Query
          |
          v
-     Query Router
+    Query Router
          |
     +----+----+
     |    |    |
     v    v    v
-  Academic Fees General
+ Academic Fees General
     |    |    |
     v    v    v
-  Academic Fee RAG Direct LLM
-    RAG   |       |
+ Academic Fee RAG Direct LLM
+   RAG   |       |
     |    |       |
     +----+-------+
          |
          v
     Final Answer
 
+- **Query Router:** Identifies the category of the user's query.
+- **Conditional Edges:** Direct the workflow to the selected node.
+- **RAG Nodes:** Retrieve relevant information from the corresponding PDF.
+- **General Node:** Handles queries that do not require document retrieval.
+- **Final Answer:** Returns the generated response to the user.
+
 ## RAG Pipeline
 
 For academic and fee-related queries, the application retrieves relevant information from the corresponding PDF documents.
-
-1. Load PDF documents.
-2. Split documents into smaller chunks.
-3. Generate embeddings using Hugging Face.
-4. Store embeddings in a FAISS vector database.
-5. Retrieve the most relevant chunks.
-6. Generate a response using the Groq LLM.
 
     PDF Documents
          |
@@ -78,13 +77,25 @@ For academic and fee-related queries, the application retrieves relevant informa
     FAISS Vector Store
          |
          v
-    Relevant Document Retrieval
+    Similarity Search
          |
          v
-       Groq LLM
+    Relevant Document Chunks
          |
          v
-     Final Response
+    Groq LLM
+         |
+         v
+    Final Response
+
+**RAG Process:**
+
+1. **Document Loading:** Loads the academic handbook and fee structure PDFs.
+2. **Text Splitting:** Divides documents into smaller chunks.
+3. **Embeddings:** Converts text chunks into numerical vectors using Hugging Face.
+4. **Vector Storage:** Stores the embeddings in a FAISS vector database.
+5. **Retrieval:** Finds the most relevant chunks based on the user's query.
+6. **Response Generation:** Uses the retrieved context to generate an answer through the Groq LLM.
 
 ## Technology Stack
 
@@ -129,7 +140,6 @@ Note: Create your local `.env` file for API credentials. Do not commit it to Git
 ### 1. Clone the Repository
 
     git clone https://github.com/aniketjadhav25000/Conditional-RAG-College-Assistant-Chatbot.git
-
     cd Conditional-RAG-College-Assistant-Chatbot
 
 ### 2. Create a Virtual Environment
