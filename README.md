@@ -30,27 +30,11 @@ It supports three programmes:
 | General | Direct LLM Response | General Knowledge |
 
 ## Conditional Workflow
+<img width="1774" height="478" alt="Student Chatbot System Architecture" src="https://github.com/user-attachments/assets/e3532a9c-332f-42b0-a8e1-c95c986dd105" />
+
 
 The chatbot uses LangGraph conditional edges to classify student queries and route them to the appropriate processing path.
 
-    User Query
-         |
-         v
-    Query Router
-         |
-    +----+----+
-    |    |    |
-    v    v    v
- Academic Fees General
-    |    |    |
-    v    v    v
- Academic Fee RAG Direct LLM
-   RAG   |       |
-    |    |       |
-    +----+-------+
-         |
-         v
-    Final Answer
 
 - **Query Router:** Identifies the category of the user's query.
 - **Conditional Edges:** Direct the workflow to the selected node.
@@ -58,35 +42,6 @@ The chatbot uses LangGraph conditional edges to classify student queries and rou
 - **General Node:** Handles queries that do not require document retrieval.
 - **Final Answer:** Returns the generated response to the user.
 
-## RAG Pipeline
-
-For academic and fee-related queries, the application retrieves relevant information from the corresponding PDF documents.
-
-    PDF Documents
-         |
-         v
-    Document Loader
-         |
-         v
-    Text Splitting
-         |
-         v
-    Hugging Face Embeddings
-         |
-         v
-    FAISS Vector Store
-         |
-         v
-    Similarity Search
-         |
-         v
-    Relevant Document Chunks
-         |
-         v
-    Groq LLM
-         |
-         v
-    Final Response
 
 **RAG Process:**
 
