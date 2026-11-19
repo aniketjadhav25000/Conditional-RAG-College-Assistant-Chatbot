@@ -1,8 +1,15 @@
-import streamlit as st
 import os
+
+# Keep CPU/thread usage predictable on small Render instances.
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+
+import streamlit as st
 import time
 import uuid
 import json
+import logging
 from datetime import datetime
 from typing import TypedDict, Annotated
 from langgraph.graph.message import add_messages
@@ -15,6 +22,8 @@ from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("conditional_rag")
 
 # ─────────────────────────────────────────────
 # PAGE CONFIG
@@ -1049,40 +1058,73 @@ section[data-testid="stSidebar"] label {
 # ─────────────────────────────────────────────
 # BACKEND (Unchanged)
 # ─────────────────────────────────────────────
-@st.cache_resource(show_spinner="Loading knowledge base…")
+@st.cache_resource(show_spinner=False)
 def load_graph():
+    """Build and cache the embedding model, PDF retrievers, LLM and LangGraph."""
+    logger.info("Starting Conditional RAG knowledge-base initialization")
+
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "GROQ_API_KEY is not configured. Add it under Render > Environment."
+        )
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    academic_pdf = os.path.join(base_dir, "academics_handbook.pdf")
+    fee_pdf = os.path.join(base_dir, "fee_structure.pdf")
+
+    for pdf_path in (academic_pdf, fee_pdf):
+        if not os.path.isfile(pdf_path):
+            raise FileNotFoundError(
+                f"Required knowledge-base PDF was not found: {pdf_path}. "
+                "Make sure the PDF is committed to the repository."
+            )
+
+    logger.info("Loading Hugging Face embedding model on CPU")
     embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"batch_size": 16},
     )
 
-    def build_retriever(pdf_path: str):
-        loader = PyPDFLoader(pdf_path)
-        document = loader.load()
+    def build_retriever(pdf_path: str, label: str):
+        logger.info("Loading %s PDF: %s", label, pdf_path)
+        documents = PyPDFLoader(pdf_path).load()
+        if not documents:
+            raise RuntimeError(f"The {label} PDF contains no readable pages.")
+
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=800,
-            chunk_overlap=100
+            chunk_overlap=100,
         )
-        chunks = splitter.split_documents(document)
+        chunks = splitter.split_documents(documents)
+        if not chunks:
+            raise RuntimeError(f"No text could be extracted from the {label} PDF.")
+
+        logger.info("Creating %s FAISS index from %s chunks", label, len(chunks))
         vectorstore = FAISS.from_documents(chunks, embeddings)
         return vectorstore.as_retriever(search_kwargs={"k": 4})
 
-    academic_retriever = build_retriever("academics_handbook.pdf")
-    fee_retriever = build_retriever("fee_structure.pdf")
+    academic_retriever = build_retriever(academic_pdf, "academic handbook")
+    fee_retriever = build_retriever(fee_pdf, "fee structure")
 
+    logger.info("Initializing Groq chat model")
     llm = ChatGroq(
+        api_key=api_key,
         model="openai/gpt-oss-20b",
-        temperature=0.4
+        temperature=0.4,
+        timeout=60,
+        max_retries=2,
     )
 
     class State(TypedDict):
         programme: str
         messages: Annotated[list, add_messages]
-        qurey_type: str
+        query_type: str
         retrieved_context: str
 
     def classifier_node(state: State) -> dict:
         last_message = state["messages"][-1].content
-
         prompt = (
             "Classify the following student query into exactly one category: "
             "'academic', 'fee', or 'general'.\n\n"
@@ -1095,29 +1137,36 @@ def load_graph():
             f"Query: {last_message}\n\n"
             "Return only one word: academic, fee, or general."
         )
-
+        logger.info("Classifying user query")
         response = llm.invoke(prompt)
-        category = response.content.strip().lower()
+        category_text = str(response.content).strip().lower()
 
-        if "academic" in category:
+        if "academic" in category_text:
             category = "academic"
-        elif "fee" in category:
+        elif "fee" in category_text:
             category = "fee"
         else:
             category = "general"
 
-        return {"qurey_type": category}
+        logger.info("Query classified as %s", category)
+        return {"query_type": category}
 
     def academic_rag_node(state: State) -> dict:
         query = state["messages"][-1].content
+        logger.info("Retrieving academic context")
         docs = academic_retriever.invoke(query)
-        context = "\n\n".join([doc.page_content for doc in docs])
+        context = "\n\n".join(doc.page_content for doc in docs)
+        if not context.strip():
+            logger.warning("Academic retriever returned no context")
         return {"retrieved_context": context}
 
     def fee_rag_node(state: State) -> dict:
         query = state["messages"][-1].content
+        logger.info("Retrieving fee context")
         docs = fee_retriever.invoke(query)
-        context = "\n\n".join([doc.page_content for doc in docs])
+        context = "\n\n".join(doc.page_content for doc in docs)
+        if not context.strip():
+            logger.warning("Fee retriever returned no context")
         return {"retrieved_context": context}
 
     def general_node(state: State) -> dict:
@@ -1126,7 +1175,7 @@ def load_graph():
     def response_node(state: State) -> dict:
         query = state["messages"][-1].content
         programme = state.get("programme", "Unknown")
-        context = state["retrieved_context"]
+        context = state.get("retrieved_context", "")
 
         if context == "NO_RETRIEVAL_NEEDED":
             prompt = (
@@ -1136,24 +1185,30 @@ def load_graph():
         else:
             prompt = (
                 f"You are a college assistant helping a {programme} student. "
-                f"Use the following context from the official college documents to answer "
-                f"the question accurately. If the context mentions specific figures for "
+                "Use the following context from the official college documents to answer "
+                "the question accurately. If the context mentions specific figures for "
                 f"different programmes, highlight the one relevant to {programme} if possible.\n\n"
-                f"Context:\n{context}\n\n"
+                f"Context:\n{context or 'No relevant text was retrieved from the college documents.'}\n\n"
                 f"Question: {query}\n\n"
-                f"Give a clear, friendly, and precise answer."
+                "If the provided context does not contain the answer, say so clearly "
+                "instead of inventing college-specific rules or figures. "
+                "Give a clear, friendly, and precise answer."
             )
 
+        logger.info("Generating final answer with Groq")
         response = llm.invoke(prompt)
-        return {"messages": [("ai", response.content.strip())]}
+        answer = str(response.content).strip()
+        if not answer:
+            raise RuntimeError("The language model returned an empty response.")
+        return {"messages": [("ai", answer)]}
 
     def route_query(state: State):
-        if state["qurey_type"] == "academic":
+        category = state.get("query_type", "general")
+        if category == "academic":
             return "academic_rag"
-        elif state["qurey_type"] == "fee":
+        if category == "fee":
             return "fee_rag"
-        else:
-            return "general"
+        return "general"
 
     graph = StateGraph(State)
     graph.add_node("classifier", classifier_node)
@@ -1169,6 +1224,7 @@ def load_graph():
     graph.add_edge("general", "response")
     graph.add_edge("response", END)
 
+    logger.info("Conditional RAG knowledge base initialized successfully")
     return graph.compile()
 
 
@@ -1183,6 +1239,7 @@ DEFAULTS = {
     "session_started": datetime.now().strftime("%d %b %Y, %H:%M"),
     "message_count": 0,
     "last_latency_ms": None,
+    "last_error": None,
 }
 
 for k, v in DEFAULTS.items():
@@ -1195,6 +1252,7 @@ if st.query_params.get("home") == "1":
     st.session_state.chat_history = []
     st.session_state.message_count = 0
     st.session_state.last_latency_ms = None
+    st.session_state.last_error = None
     st.session_state.session_id = uuid.uuid4().hex[:8].upper()
     st.session_state.session_started = datetime.now().strftime("%d %b %Y, %H:%M")
     st.query_params.clear()
@@ -1244,6 +1302,7 @@ def clear_conversation():
     st.session_state.chat_history = []
     st.session_state.message_count = 0
     st.session_state.last_latency_ms = None
+    st.session_state.last_error = None
     st.session_state.session_id = uuid.uuid4().hex[:8].upper()
     st.session_state.session_started = datetime.now().strftime("%d %b %Y, %H:%M")
 
@@ -1371,6 +1430,7 @@ if st.session_state.programme:
             st.session_state.chat_history = []
             st.session_state.message_count = 0
             st.session_state.last_latency_ms = None
+            st.session_state.last_error = None
             st.session_state.session_id = uuid.uuid4().hex[:8].upper()
             st.session_state.session_started = datetime.now().strftime("%d %b %Y, %H:%M")
             st.query_params.clear()
@@ -1464,6 +1524,10 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+if st.session_state.last_error:
+    st.error(st.session_state.last_error)
+    st.session_state.last_error = None
+
 
 # ── 2. Chat history / welcome state ──────────
 CHAT_HEIGHT = 430
@@ -1508,28 +1572,38 @@ if user_input:
         "content": user_input,
     })
 
-    app = load_graph()
-
     t_start = time.perf_counter()
 
-    with st.spinner("Retrieving and generating…"):
-        result = app.invoke({
-            "programme": programme,
-            "messages": [("human", user_input)],
+    try:
+        with st.spinner("Loading knowledge base and generating response…"):
+            app = load_graph()
+            result = app.invoke({
+                "programme": programme,
+                "messages": [("human", user_input)],
+            })
+
+        ai_reply = result["messages"][-1].content
+        query_tag = result.get("query_type", "general")
+        if not ai_reply or not str(ai_reply).strip():
+            raise RuntimeError("The assistant returned an empty response.")
+
+        st.session_state.chat_history.append({
+            "role": "ai",
+            "content": str(ai_reply).strip(),
+            "tag": query_tag,
         })
+        st.session_state.message_count += 1
+        st.session_state.last_error = None
 
-    elapsed_ms = int((time.perf_counter() - t_start) * 1000)
-    st.session_state.last_latency_ms = elapsed_ms
+    except Exception as exc:
+        logger.exception("Failed to process user query")
+        st.session_state.last_error = (
+            f"Unable to generate a response: {type(exc).__name__}: {exc}"
+        )
 
-    ai_reply = result["messages"][-1].content
-    query_tag = result.get("qurey_type", "general")
-
-    st.session_state.chat_history.append({
-        "role": "ai",
-        "content": ai_reply,
-        "tag": query_tag,
-    })
-
-    st.session_state.message_count += 1
+    finally:
+        st.session_state.last_latency_ms = int(
+            (time.perf_counter() - t_start) * 1000
+        )
 
     st.rerun()
