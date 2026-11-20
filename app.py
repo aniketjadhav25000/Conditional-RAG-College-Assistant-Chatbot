@@ -17,7 +17,7 @@ from langgraph.graph import StateGraph, START, END
 from langchain_groq import ChatGroq
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
 
@@ -1080,12 +1080,20 @@ def load_graph():
                 "Make sure the PDF is committed to the repository."
             )
 
-    logger.info("Loading Hugging Face embedding model on CPU")
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2",
-        model_kwargs={"device": "cpu"},
-        encode_kwargs={"batch_size": 16},
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        raise RuntimeError(
+            "GEMINI_API_KEY is not configured. Add it under Render > Environment."
+        )
+
+    logger.info("Initializing Gemini embedding API")
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model="models/gemini-embedding-001",
+        google_api_key=gemini_api_key,
     )
+
+    # Build each FAISS retriever only when its category is first requested.
+    retrievers = {}
 
     def build_retriever(pdf_path: str, label: str):
         logger.info("Loading %s PDF: %s", label, pdf_path)
@@ -1105,8 +1113,15 @@ def load_graph():
         vectorstore = FAISS.from_documents(chunks, embeddings)
         return vectorstore.as_retriever(search_kwargs={"k": 4})
 
-    academic_retriever = build_retriever(academic_pdf, "academic handbook")
-    fee_retriever = build_retriever(fee_pdf, "fee structure")
+    def get_retriever(key: str):
+        if key not in retrievers:
+            if key == "academic":
+                retrievers[key] = build_retriever(academic_pdf, "academic handbook")
+            elif key == "fee":
+                retrievers[key] = build_retriever(fee_pdf, "fee structure")
+            else:
+                raise ValueError(f"Unknown retriever category: {key}")
+        return retrievers[key]
 
     logger.info("Initializing Groq chat model")
     llm = ChatGroq(
@@ -1154,7 +1169,7 @@ def load_graph():
     def academic_rag_node(state: State) -> dict:
         query = state["messages"][-1].content
         logger.info("Retrieving academic context")
-        docs = academic_retriever.invoke(query)
+        docs = get_retriever("academic").invoke(query)
         context = "\n\n".join(doc.page_content for doc in docs)
         if not context.strip():
             logger.warning("Academic retriever returned no context")
@@ -1163,7 +1178,7 @@ def load_graph():
     def fee_rag_node(state: State) -> dict:
         query = state["messages"][-1].content
         logger.info("Retrieving fee context")
-        docs = fee_retriever.invoke(query)
+        docs = get_retriever("fee").invoke(query)
         context = "\n\n".join(doc.page_content for doc in docs)
         if not context.strip():
             logger.warning("Fee retriever returned no context")
@@ -1343,7 +1358,7 @@ with st.sidebar:
     <div class="sb-kv"><span class="k">Academics handbook</span><span class="v">PDF</span></div>
     <div class="sb-kv"><span class="k">Fee structure</span><span class="v">PDF</span></div>
     <div class="sb-kv"><span class="k">Classifier</span><span class="v">gpt-oss-20b</span></div>
-    <div class="sb-kv"><span class="k">Embeddings</span><span class="v">MiniLM-L6</span></div>
+    <div class="sb-kv"><span class="k">Embeddings</span><span class="v">Gemini</span></div>
     """, unsafe_allow_html=True)
 
     if st.session_state.chat_history:
